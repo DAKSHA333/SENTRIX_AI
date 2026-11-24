@@ -1,0 +1,18 @@
+{
+  "model": "yolov8n.pt",
+  "confidence": 0.35,
+  "sample_every": 3,
+  "min_box_area": 500,
+  "max_track_gap": 12,
+  "match_iou": 0.15,
+  "restricted_zones": [
+    {"name": "restricted_demo", "polygon": [[450, 80], [850, 80], [850, 650], [450, 650]], "alert_on_entry": true}
+  ],
+  "bag_classes": ["backpack", "handbag", "suitcase"],
+  "alert_object_classes": ["knife", "scissors"],
+  "stationary_pixels_per_second": 3.0,
+  "unattended_seconds": 20.0,
+  "association_distance_px": 140.0,
+  "low_quality_min_person_height": 35,
+  "database": "data/sentrix.db"
+}

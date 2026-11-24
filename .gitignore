@@ -1,0 +1,22 @@
+__pycache__/
+.pytest_cache/
+.venv/
+*.db
+*.pt
+data/evidence/
+data/synthetic/
+data/trajectories*.csv
+reports/
+.mplconfig/
+notify.json
+data/live_snapshots/
+
+# Local runtime files and secrets
+*.log
+.env
+.env.*
+!.env.example
+.DS_Store
+*.db-shm
+*.db-wal
+

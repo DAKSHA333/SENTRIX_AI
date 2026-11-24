@@ -1,0 +1,19 @@
+{
+  "_help": "Copy to notify.json (never commit it). Remove any channel you do not use. See README 'Live demo' for setup steps.",
+  "telegram": {
+    "bot_token": "123456789:ABC-your-bot-token-from-BotFather",
+    "chat_ids": ["111111111"]
+  },
+  "email": {
+    "smtp_host": "smtp.gmail.com",
+    "smtp_port": 587,
+    "username": "your.address@gmail.com",
+    "password": "your-16-character-app-password",
+    "from": "your.address@gmail.com",
+    "to": ["security.contact@example.com"]
+  },
+  "webhooks": [],
+  "cooldown_seconds": 30,
+  "notify_withheld": false,
+  "dashboard_url": "http://127.0.0.1:8080"
+}

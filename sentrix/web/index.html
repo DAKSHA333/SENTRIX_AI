@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SENTRIX AI · Live Monitor</title>
+<style>
+  :root {
+    --bg: #0b0f14; --panel: #121821; --panel-2: #18202b; --line: #243040; --text: #e6edf3; --muted: #8b98a8;
+    --red: #ff4d4f; --red-soft: rgba(255,77,79,.14); --amber: #f5a524; --amber-soft: rgba(245,165,36,.14);
+    --green: #2fbf71; --green-soft: rgba(47,191,113,.14); --blue: #4c9aff; --radius: 12px;
+    --mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, sans-serif; }
+  button { font: inherit; color: inherit; cursor: pointer; }
+  header { display: flex; align-items: center; gap: 16px; padding: 12px 20px; border-bottom: 1px solid var(--line); background: #0d131a; position: sticky; top: 0; z-index: 5; }
+  .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; letter-spacing: .08em; }
+  .brand .mark { width: 26px; height: 26px; border-radius: 7px; background: conic-gradient(from 210deg, var(--red), #ff8a4c, var(--red)); display: grid; place-items: center; }
+  .brand .mark::after { content: ""; width: 10px; height: 10px; border-radius: 50%; background: var(--bg); }
+  .brand small { color: var(--muted); font-weight: 500; letter-spacing: .02em; }
+  .pill { display: inline-flex; align-items: center; gap: 7px; padding: 4px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; background: var(--panel-2); border: 1px solid var(--line); }
+  .pill .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); }
+  .pill.live .dot { background: var(--green); box-shadow: 0 0 0 0 rgba(47,191,113,.6); animation: pulse 1.6s infinite; }
+  .pill.error { color: var(--red); } .pill.error .dot { background: var(--red); }
+  @keyframes pulse { 70% { box-shadow: 0 0 0 8px rgba(47,191,113,0); } 100% { box-shadow: 0 0 0 0 rgba(47,191,113,0); } }
+  .meta { color: var(--muted); font-family: var(--mono); font-size: 12px; display: flex; gap: 14px; flex-wrap: wrap; }
+  .spacer { flex: 1; }
+  main { display: grid; grid-template-columns: minmax(0, 1.7fr) minmax(340px, 1fr); gap: 16px; padding: 16px 20px 24px; max-width: 1600px; margin: 0 auto; }
+  @media (max-width: 1000px) { main { grid-template-columns: 1fr; } }
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); }
+  .panel h2 { margin: 0; font-size: 12px; text-transform: uppercase; letter-spacing: .09em; color: var(--muted); font-weight: 600; }
+  .panel-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 12px 14px; border-bottom: 1px solid var(--line); }
+  .video-wrap { position: relative; background: #000; border-radius: 0 0 var(--radius) var(--radius); overflow: hidden; aspect-ratio: 16 / 9; }
+  .video-wrap img { width: 100%; height: 100%; object-fit: contain; display: block; }
+  .video-wrap.flash { outline: 4px solid var(--red); outline-offset: -4px; animation: flash .5s 6 alternate; }
+  @keyframes flash { from { outline-color: var(--red); } to { outline-color: transparent; } }
+  .video-wrap .overlay-msg { position: absolute; inset: 0; display: grid; place-items: center; color: var(--muted); text-align: center; padding: 20px; }
+  .alert-banner { position: absolute; left: 14px; right: 14px; bottom: 14px; padding: 12px 14px; border-radius: 10px; background: rgba(160,20,24,.92); color: #fff; font-weight: 600; display: none; align-items: center; gap: 12px; backdrop-filter: blur(4px); }
+  .alert-banner.show { display: flex; }
+  .alert-banner.withheld { background: rgba(140,90,0,.92); }
+  .alert-banner button { margin-left: auto; background: rgba(255,255,255,.18); border: 0; border-radius: 7px; padding: 6px 10px; }
+  .watch { display: flex; flex-wrap: wrap; gap: 8px; padding: 12px 14px; }
+  .chip { padding: 6px 10px; border-radius: 8px; background: var(--panel-2); border: 1px solid var(--line); font-size: 12px; }
+  .chip b { font-weight: 600; } .chip span { color: var(--muted); }
+  .chip.on { border-color: rgba(47,191,113,.4); background: var(--green-soft); }
+  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+  .stat { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 12px; }
+  .stat .k { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .08em; }
+  .stat .v { font-size: 26px; font-weight: 700; font-variant-numeric: tabular-nums; margin-top: 2px; }
+  .stat.hot .v { color: var(--red); }
+  .side { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+  .tabs { display: flex; gap: 4px; background: var(--panel-2); padding: 3px; border-radius: 9px; }
+  .tabs button { border: 0; background: none; padding: 5px 10px; border-radius: 7px; font-size: 12px; color: var(--muted); }
+  .tabs button.active { background: var(--line); color: var(--text); }
+  .feed { max-height: calc(100vh - 360px); min-height: 280px; overflow: auto; padding: 8px; display: flex; flex-direction: column; gap: 8px; }
+  .card { display: grid; grid-template-columns: 112px 1fr; gap: 12px; padding: 10px; border-radius: 10px; background: var(--panel-2); border: 1px solid var(--line); border-left: 4px solid var(--red); }
+  .card.withheld { border-left-color: var(--amber); }
+  .card.reviewed { opacity: .62; border-left-color: var(--line); }
+  .card.new { animation: arrive .6s ease-out; }
+  @keyframes arrive { from { transform: translateY(-6px); background: var(--red-soft); } }
+  .thumb { width: 112px; height: 72px; border-radius: 7px; object-fit: cover; background: #000; cursor: zoom-in; border: 1px solid var(--line); }
+  .card h3 { margin: 0 0 2px; font-size: 14px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .badge { font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 5px; text-transform: uppercase; letter-spacing: .06em; }
+  .badge.alert { background: var(--red-soft); color: var(--red); }
+  .badge.withheld { background: var(--amber-soft); color: var(--amber); }
+  .badge.confirmed { background: var(--red-soft); color: var(--red); } .badge.dismissed { background: var(--panel); color: var(--muted); }
+  .badge.escalated { background: var(--red); color: #fff; } .badge.notified { background: rgba(76,154,255,.15); color: var(--blue); }
+  .time { color: var(--muted); font-family: var(--mono); font-size: 11px; }
+  .reason { color: #c5cfdb; font-size: 12.5px; margin: 4px 0 6px; }
+  .flags { color: var(--amber); font-size: 11.5px; margin-bottom: 6px; }
+  .actions { display: flex; gap: 6px; flex-wrap: wrap; }
+  .actions button, .btn { border: 1px solid var(--line); background: var(--panel); padding: 5px 10px; border-radius: 7px; font-size: 12px; }
+  .actions button:hover, .btn:hover { border-color: #3a4a60; background: #1d2633; }
+  .actions .confirm { border-color: rgba(255,77,79,.45); color: #ffb3b4; }
+  .actions .escalate { background: var(--red); border-color: var(--red); color: #fff; }
+  .empty { color: var(--muted); text-align: center; padding: 40px 10px; }
+  .notify-body { padding: 12px 14px; display: flex; flex-direction: column; gap: 10px; }
+  .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .log { font-family: var(--mono); font-size: 11.5px; color: var(--muted); max-height: 120px; overflow: auto; }
+  .log .ok { color: var(--green); } .log .fail { color: var(--red); }
+  .toggle { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); cursor: pointer; }
+  .disclaimer { color: var(--muted); font-size: 11.5px; padding: 0 20px 18px; max-width: 1600px; margin: 0 auto; }
+  dialog { border: 1px solid var(--line); background: var(--panel); color: var(--text); border-radius: var(--radius); padding: 0; max-width: min(1100px, 94vw); }
+  dialog::backdrop { background: rgba(0,0,0,.7); }
+  dialog img { display: block; max-width: 100%; max-height: 80vh; }
+  dialog .dlg-foot { padding: 10px 14px; display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+  .toast { position: fixed; right: 20px; bottom: 20px; background: var(--panel-2); border: 1px solid var(--line); padding: 10px 14px; border-radius: 10px; opacity: 0; transform: translateY(8px); transition: .25s; z-index: 20; }
+  .toast.show { opacity: 1; transform: none; }
+</style>
+</head>
+<body>
+<header>
+  <div class="brand"><div class="mark"></div>SENTRIX AI <small>Live Monitor</small></div>
+  <span id="statusPill" class="pill"><span class="dot"></span><span id="statusText">Connecting</span></span>
+  <div class="meta"><span id="camName">—</span><span id="fps">— fps</span><span id="res"></span><span id="detector"></span></div>
+  <div class="spacer"></div>
+  <div class="meta"><span id="clock"></span></div>
+</header>
+
+<main>
+  <section style="display:flex;flex-direction:column;gap:16px;min-width:0">
+    <div class="panel">
+      <div class="panel-head"><h2>Live camera</h2><span class="time" id="seen">People: 0 · Objects: none</span></div>
+      <div class="video-wrap" id="videoWrap">
+        <img id="video" src="/video" alt="Live camera feed with detections">
+        <div class="overlay-msg" id="videoMsg">Waiting for camera…</div>
+        <div class="alert-banner" id="banner"><span id="bannerText"></span><button id="bannerReview">Review</button></div>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-head"><h2>Watching for</h2><span class="time" id="watchCount"></span></div>
+      <div class="watch" id="watch"></div>
+    </div>
+  </section>
+
+  <aside class="side">
+    <div class="stats">
+      <div class="stat hot"><div class="k">Needs action</div><div class="v" id="sOpen">0</div></div>
+      <div class="stat"><div class="k">Alerts</div><div class="v" id="sTotal">0</div></div>
+      <div class="stat"><div class="k">People now</div><div class="v" id="sPeople">0</div></div>
+      <div class="stat"><div class="k">Notified</div><div class="v" id="sNotified">0</div></div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head">
+        <h2>Alerts</h2>
+        <div class="tabs" id="tabs">
+          <button data-f="open" class="active">Needs action</button><button data-f="withheld">Low evidence</button>
+          <button data-f="reviewed">Reviewed</button><button data-f="all">All</button>
+        </div>
+      </div>
+      <div class="feed" id="feed"><div class="empty">No alerts yet. Hold a knife or scissors up to the camera to test.</div></div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head"><h2>Notifications</h2><div class="row" id="channels"></div></div>
+      <div class="notify-body">
+        <div class="row">
+          <button class="btn" id="testBtn">Send test alert</button>
+          <button class="btn" id="browserBtn">Enable browser notifications</button>
+          <label class="toggle"><input type="checkbox" id="soundToggle" checked> Alarm sound</label>
+        </div>
+        <div class="log" id="log"></div>
+      </div>
+    </div>
+  </aside>
+</main>
+<p class="disclaimer">Automated detections of configured objects and events. They do not identify people or establish intent. A person must review every alert before acting. Snapshots are saved with face-region blur.</p>
+
+<dialog id="dlg"><img id="dlgImg" alt="Alert snapshot"><div class="dlg-foot"><span id="dlgText" class="reason"></span><button class="btn" onclick="dlg.close()">Close</button></div></dialog>
+<div class="toast" id="toast"></div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const state = { alerts: [], filter: "open", status: {}, newIds: new Set() };
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const isWithheld = (a) => a.event_type === "insufficient_evidence";
+const reviewed = (a) => a.decision && a.decision !== "unreviewed";
+
+function toast(msg) { const t = $("toast"); t.textContent = msg; t.classList.add("show"); clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove("show"), 2600); }
+
+function render() {
+  const f = state.filter;
+  const list = state.alerts.filter(a => f === "all" ? true : f === "reviewed" ? reviewed(a) : f === "withheld" ? isWithheld(a) && !reviewed(a) : !reviewed(a) && !isWithheld(a));
+  const feed = $("feed");
+  if (!list.length) {
+    feed.innerHTML = `<div class="empty">${f === "open" ? "Nothing needs action. Hold a knife or scissors up to the camera to test." : "Nothing here."}</div>`;
+  } else {
+    feed.innerHTML = list.map(a => {
+      const m = a.measurements || {};
+      const conf = m.detector_confidence != null ? ` · ${Math.round(m.detector_confidence * 100)}%` : "";
+      const kind = isWithheld(a) ? `<span class="badge withheld">low evidence</span>` : `<span class="badge alert">alert</span>`;
+      const dec = reviewed(a) ? `<span class="badge ${esc(a.decision)}">${esc(a.decision)}</span>` : "";
+      const notified = a.notified ? `<span class="badge notified">notified</span>` : "";
+      const flags = (a.evidence_reasons || []).length ? `<div class="flags">⚠ ${esc(a.evidence_reasons.map(r => r.toLowerCase().replaceAll("_", " ")).join(", "))}</div>` : "";
+      const img = a.snapshot ? `<img class="thumb" loading="lazy" src="/snapshots/${encodeURIComponent(a.snapshot)}" data-id="${a.id}" alt="snapshot">` : `<div class="thumb"></div>`;
+      const actions = reviewed(a) ? "" : `<div class="actions">
+          <button class="confirm" data-d="confirmed" data-id="${a.id}">Confirm</button>
+          <button data-d="dismissed" data-id="${a.id}">Dismiss</button>
+          <button class="escalate" data-d="escalated" data-id="${a.id}">Escalate</button></div>`;
+      return `<div class="card ${isWithheld(a) ? "withheld" : ""} ${reviewed(a) ? "reviewed" : ""} ${state.newIds.has(a.id) ? "new" : ""}" id="a${a.id}">
+        ${img}<div><h3>${esc(a.title)} ${kind}${dec}${notified}</h3>
+        <div class="time">#${a.id} · ${esc(a.wall_time || a.created_at)}${conf}${a.zone ? " · " + esc(a.zone) : ""}</div>
+        <div class="reason">${esc(a.reason)}</div>${flags}${actions}</div></div>`;
+    }).join("");
+  }
+  state.newIds.clear();
+  const open = state.alerts.filter(a => !reviewed(a) && !isWithheld(a)).length;
+  $("sOpen").textContent = open; $("sTotal").textContent = state.alerts.length;
+  $("sNotified").textContent = state.alerts.filter(a => a.notified).length || (state.status.notification_log || []).filter(r => r.ok).length;
+  document.title = (open ? `(${open}) ` : "") + "SENTRIX AI · Live Monitor";
+}
+
+function renderStatus(s) {
+  state.status = s;
+  const pill = $("statusPill");
+  pill.className = "pill " + (s.status === "live" ? "live" : s.status === "error" ? "error" : "");
+  $("statusText").textContent = s.status === "live" ? "LIVE" : s.status === "error" ? "Error" : (s.status || "…");
+  $("camName").textContent = s.camera || "";
+  $("fps").textContent = `${s.fps ?? 0} fps`;
+  $("res").textContent = s.resolution || "";
+  $("detector").textContent = s.detector || "";
+  $("sPeople").textContent = s.people ?? 0;
+  $("seen").textContent = `People: ${s.people ?? 0} · Objects: ${(s.objects || []).join(", ") || "none"}`;
+  $("videoMsg").style.display = s.status === "live" && s.frames > 0 ? "none" : "grid";
+  if (s.status === "error") $("videoMsg").textContent = s.error;
+  $("watch").innerHTML = (s.watching || []).map(w => `<div class="chip on"><b>${esc(w.name)}</b> <span>${esc(w.detail)}</span></div>`).join("");
+  $("watchCount").textContent = `${(s.watching || []).length} detectors active`;
+  $("channels").innerHTML = (s.channels || []).length ? s.channels.map(c => `<span class="pill">${esc(c)}</span>`).join("")
+    : `<span class="time">website only · add notify.json</span>`;
+  $("log").innerHTML = (s.notification_log || []).map(r => `<div><span class="${r.ok ? "ok" : "fail"}">${r.ok ? "✓" : "✗"}</span> ${esc(r.time)} ${esc(r.channel)} — ${esc(r.detail)}</div>`).join("") || "No notifications sent yet.";
+}
+
+let audioCtx;
+function alarm() {
+  if (!$("soundToggle").checked) return;
+  try {
+    audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+    [0, .28, .56].forEach((t, i) => {
+      const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+      o.type = "square"; o.frequency.value = i % 2 ? 660 : 880;
+      g.gain.setValueAtTime(.0001, audioCtx.currentTime + t);
+      g.gain.exponentialRampToValueAtTime(.18, audioCtx.currentTime + t + .02);
+      g.gain.exponentialRampToValueAtTime(.0001, audioCtx.currentTime + t + .24);
+      o.connect(g).connect(audioCtx.destination); o.start(audioCtx.currentTime + t); o.stop(audioCtx.currentTime + t + .26);
+    });
+  } catch (e) {}
+}
+
+function onAlert(a) {
+  if (state.alerts.some(x => x.id === a.id)) return;
+  state.alerts.unshift(a); state.newIds.add(a.id);
+  const withheld = isWithheld(a);
+  const b = $("banner");
+  $("bannerText").textContent = (withheld ? "Needs review: " : "ALERT: ") + a.title;
+  b.classList.toggle("withheld", withheld); b.classList.add("show"); b.dataset.id = a.id;
+  clearTimeout(b._h); b._h = setTimeout(() => b.classList.remove("show"), 9000);
+  if (!withheld) {
+    const w = $("videoWrap"); w.classList.remove("flash"); void w.offsetWidth; w.classList.add("flash");
+    alarm();
+    if ("Notification" in window && Notification.permission === "granted") {
+      const n = new Notification("SENTRIX AI: " + a.title, { body: a.reason, icon: a.snapshot ? "/snapshots/" + a.snapshot : undefined, tag: "sentrix-" + a.id });
+      n.onclick = () => { window.focus(); openSnap(a.id); };
+    }
+  }
+  render();
+}
+
+async function decide(id, decision) {
+  const r = await fetch(`/api/alerts/${id}/decision`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ decision }) });
+  if (!r.ok) return toast("Could not save decision");
+  const a = state.alerts.find(x => x.id === id); if (a) a.decision = decision;
+  toast(decision === "escalated" ? "Escalated — contacts notified again" : `Marked ${decision}`);
+  render();
+}
+
+function openSnap(id) {
+  const a = state.alerts.find(x => x.id === Number(id)); if (!a || !a.snapshot) return;
+  $("dlgImg").src = "/snapshots/" + encodeURIComponent(a.snapshot);
+  $("dlgText").textContent = `${a.title} — ${a.reason}`;
+  $("dlg").showModal();
+}
+
+$("feed").addEventListener("click", (e) => {
+  const btn = e.target.closest("button[data-d]"); if (btn) return decide(Number(btn.dataset.id), btn.dataset.d);
+  const img = e.target.closest("img.thumb"); if (img) openSnap(img.dataset.id);
+});
+$("tabs").addEventListener("click", (e) => {
+  const b = e.target.closest("button"); if (!b) return;
+  state.filter = b.dataset.f; [...$("tabs").children].forEach(x => x.classList.toggle("active", x === b)); render();
+});
+$("bannerReview").onclick = () => openSnap($("banner").dataset.id);
+$("testBtn").onclick = async () => {
+  const r = await (await fetch("/api/test-alert", { method: "POST" })).json();
+  toast(r.queued ? `Test sent via ${r.channels.join(", ")}` : "No channels configured — add notify.json");
+  alarm(); setTimeout(pollStatus, 2500);
+};
+$("browserBtn").onclick = async () => {
+  if (!("Notification" in window)) return toast("This browser does not support notifications");
+  const p = await Notification.requestPermission();
+  toast(p === "granted" ? "Browser notifications on" : "Permission not granted");
+  $("browserBtn").textContent = p === "granted" ? "Browser notifications on" : "Enable browser notifications";
+  if (audioCtx === undefined) alarm();   // unlock audio after a user gesture
+};
+if ("Notification" in window && Notification.permission === "granted") $("browserBtn").textContent = "Browser notifications on";
+
+$("video").onerror = () => setTimeout(() => { $("video").src = "/video?" + Date.now(); }, 1500);
+setInterval(() => { $("clock").textContent = new Date().toLocaleString(); }, 1000);
+
+async function pollStatus() { try { renderStatus(await (await fetch("/api/status")).json()); } catch (e) { $("statusText").textContent = "Offline"; } }
+async function loadAlerts() { try { state.alerts = await (await fetch("/api/alerts?limit=200")).json(); render(); } catch (e) {} }
+
+function connect() {
+  const es = new EventSource("/api/stream");
+  es.addEventListener("alert", (e) => onAlert(JSON.parse(e.data)));
+  es.addEventListener("decision", (e) => { const d = JSON.parse(e.data); const a = state.alerts.find(x => x.id === d.id); if (a) { a.decision = d.decision; render(); } });
+  es.addEventListener("status", (e) => renderStatus({ ...state.status, ...JSON.parse(e.data) }));
+  es.onerror = () => { es.close(); setTimeout(() => { connect(); loadAlerts(); }, 2000); };
+}
+pollStatus(); loadAlerts(); connect(); setInterval(pollStatus, 2000);
+</script>
+</body>
+</html>

@@ -1,0 +1,48 @@
+{
+  "model": "yolov8n.pt",
+  "confidence": 0.2,
+  "sample_every": 2,
+  "min_box_area": 120,
+  "max_track_gap": 12,
+  "match_iou": 0.15,
+  "restricted_zones": [
+    {
+      "name": "restricted_demo",
+      "polygon": [
+        [
+          1718,
+          283
+        ],
+        [
+          158,
+          240
+        ],
+        [
+          33,
+          1042
+        ],
+        [
+          1870,
+          1043
+        ]
+      ],
+      "alert_on_entry": true
+    }
+  ],
+  "bag_classes": [
+    "backpack",
+    "handbag",
+    "suitcase"
+  ],
+  "alert_object_classes": [
+    "knife",
+    "scissors"
+  ],
+  "stationary_pixels_per_second": 3.0,
+  "unattended_seconds": 20.0,
+  "association_distance_px": 140.0,
+  "low_quality_min_person_height": 35,
+  "low_quality_min_object_height": 12,
+  "database": "data/sentrix_demo.db",
+  "_comment": "Low thresholds for a controlled live presentation only; never report metrics from this profile. Re-run sentrix.calibrate for your camera."
+}
